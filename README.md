@@ -1,6 +1,14 @@
 # DeepVerify — TECH GUARDIANS
 
-AI + Blockchain + Digital Forensics Framework for Digital Evidence Authenticity.
+AI & Blockchain-Based Digital Evidence Authenticity and Risk Assessment Framework.
+
+## Project Domains
+- AI / Digital Forensics
+- Blockchain (Hash anchoring + IPFS)
+- Cybersecurity (Evidence integrity & chain-of-custody)
+
+## Team
+TECH GUARDIANS
 
 ## Branch Strategy
 
