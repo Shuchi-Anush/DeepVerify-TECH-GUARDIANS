@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.services.forensics.ela import run_ela
 from app.services.forensics.fft import run_fft
 from app.services.forensics.metadata import run_metadata
+from app.services.ai_detector import run_ai_detector
 
 
 def _to_artifact_url(abs_path: str | None, artifact_root: Path) -> str | None:
@@ -58,5 +59,8 @@ def run_analysis(file_path: str, file_hash: str) -> dict:
 
     # ── Metadata / EXIF Analysis ──
     signals["metadata"] = run_metadata(file_path)
+
+    # ── AI Detector (Keras neural network) ──
+    signals["ai_detector"] = run_ai_detector(file_path)
 
     return signals

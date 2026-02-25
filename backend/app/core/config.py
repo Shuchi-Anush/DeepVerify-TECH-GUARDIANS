@@ -22,6 +22,8 @@ class Settings:
         self.BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
         self.UPLOAD_DIR: Path = self.BASE_DIR / "uploads"
         self.ARTIFACTS_DIR: Path = self.BASE_DIR / "artifacts"
+        # Trained model artifacts (Keras model + scaler)
+        self.MODELS_DIR: Path = self.BASE_DIR / "models"
 
         # File-validation limits
         self.ALLOWED_EXTENSIONS: set[str] = {".jpg", ".jpeg", ".png", ".tiff", ".tif"}
@@ -34,6 +36,7 @@ class Settings:
         # Create required directories
         self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         self.ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+        self.MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 settings = Settings()

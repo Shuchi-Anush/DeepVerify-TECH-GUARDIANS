@@ -5,11 +5,14 @@ Aggregates individual forensic signal scores into a single normalised
 manipulation-risk score and a human-readable label.
 """
 
-# Weights for each forensic signal (must sum to 1.0)
+# Weights for each forensic signal (must sum to 1.0).
+# ai_detector carries the highest weight because it is a trained classifier
+# with strong empirical accuracy; classical signals act as supporting evidence.
 SIGNAL_WEIGHTS: dict[str, float] = {
-    "ela": 0.35,
-    "fft": 0.30,
-    "metadata": 0.35,
+    "ela": 0.20,
+    "fft": 0.15,
+    "metadata": 0.20,
+    "ai_detector": 0.45,
 }
 
 # Ordered thresholds → label
