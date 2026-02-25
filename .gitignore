@@ -3,6 +3,9 @@
 __pycache__/
 *.pyc
 
+backend/artifacts/
+backend/uploads/
+
 # VS Code
 .vscode/
 
