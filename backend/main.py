@@ -1,43 +1,42 @@
-# backend/main.py
-from fastapi import FastAPI, UploadFile, File
-from fastapi.responses import JSONResponse
-import shutil
-import os
-from pathlib import Path
+"""
+DeepVerify Backend — application entry point.
+"""
 
-BASE_DIR = Path(__file__).resolve().parent
-UPLOAD_DIR = BASE_DIR / "uploads"
-UPLOAD_DIR.mkdir(exist_ok=True)
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-app = FastAPI(title="DeepVerify API - TECH GUARDIANS")
+from app.core.config import settings
+from app.api.routes import router
 
-@app.get("/health")
-async def health():
-    return {"status": "ok", "service": "DeepVerify Backend"}
 
-@app.post("/upload")
-async def upload_media(file: UploadFile = File(...)):
-    # save file
-    file_path = UPLOAD_DIR / file.filename
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+def create_app() -> FastAPI:
+    """Application factory."""
+    application = FastAPI(
+        title=settings.APP_TITLE,
+        version=settings.APP_VERSION,
+    )
 
-    # placeholder response - actual analysis triggered by /analyze or background task
-    return JSONResponse({
-        "filename": file.filename,
-        "message": "File uploaded. Use /analyze to run forensic checks.",
-        "path": str(file_path)
-    })
+    # CORS — permissive for development; restrict origins in production
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-@app.post("/analyze")
-async def analyze_file(filename: str):
-    file_path = UPLOAD_DIR / filename
-    if not file_path.exists():
-        return JSONResponse({"error": "file not found"}, status_code=404)
+    # Serve forensic artifacts (heatmaps, spectrums) as static files
+    application.mount(
+        "/artifacts",
+        StaticFiles(directory=str(settings.ARTIFACTS_DIR)),
+        name="artifacts",
+    )
 
-    # TODO: call forensic services here
-    # from app.services.forensics import analyze
-    # result = analyze(str(file_path))
-    result = {"verdict": "INCONCLUSIVE", "score": 0.33, "signals": {}}
+    # Register API routes
+    application.include_router(router)
 
-    return JSONResponse({"filename": filename, "analysis": result})
+    return application
+
+
+app = create_app()
