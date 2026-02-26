@@ -4,6 +4,7 @@ DeepVerify REST API routes.
 All business logic is delegated to the service layer —
 routes handle only HTTP concerns (validation, serialisation, status codes).
 """
+import logging
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
@@ -26,6 +27,7 @@ from app.utils.file_utils import compute_sha256, save_upload
 
 router = APIRouter()
 
+logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────────────────────────────────
 # Health
@@ -52,37 +54,50 @@ async def analyze(file: UploadFile = File(...)):
     risk score, anchor to the blockchain ledger, and return
     structured results.
     """
-    # 1. Validate file (extension, magic bytes, size)
+    logger.info("Received file for analysis: %s", file.filename)
+
+    # 1. Validate file
     content = await validate_upload(file)
 
-    # 2. Compute SHA-256 hash of raw bytes
+    # 2. Compute SHA-256
     sha256 = compute_sha256(content)
 
-    # 3. Persist to disk
+    # 3. Persist file
     saved_path = save_upload(content, file.filename or "upload.bin")
 
-    # 4. Run forensic modules (ELA, FFT, Metadata, AI Detector)
+    # 4. Run forensic modules
     signals = run_analysis(str(saved_path), sha256)
 
-    # 5. Aggregate risk score
+    # 5. Compute risk score
     risk_score, risk_label = compute_risk_score(signals)
 
-    # 6. Anchor hash + metadata on the blockchain ledger
-    blockchain_record = await blockchain_service.anchor(
+    logger.info(
+        "Analysis complete | sha256=%s | score=%.4f | label=%s",
         sha256,
-        {
-            "filename": file.filename,
-            "risk_score": risk_score,
-            "risk_label": risk_label,
-        },
+        risk_score,
+        risk_label,
     )
 
-    # 7. Surface AI detector verdict at the top level for easy front-end access
+    # 6. Anchor to blockchain
+    try:
+        blockchain_record = await blockchain_service.anchor(
+            sha256,
+            {
+                "filename": file.filename,
+                "risk_score": risk_score,
+                "risk_label": risk_label,
+            },
+        )
+    except Exception as e:
+        logger.error("Blockchain anchoring failed: %s", e)
+        raise HTTPException(status_code=500, detail="Blockchain anchoring failed.")
+
+    # 7. Extract AI signal for top-level exposure
     ai_signal = signals.get("ai_detector", {})
     ai_score = float(ai_signal.get("score", 0.0))
     ai_label = ai_signal.get("ai_label", "UNAVAILABLE")
 
-    # 8. Build final result dict and persist in the result store
+    # 8. Build final result
     result = dict(
         filename=file.filename or "unknown",
         sha256=sha256,
@@ -93,11 +108,12 @@ async def analyze(file: UploadFile = File(...)):
         ai_label=ai_label,
         blockchain=blockchain_record,
     )
+
+    # 9. Persist
     result_store.save(sha256, result)
 
-    # 9. Return structured response
+    # 10. Return structured response
     return AnalysisResponse(**result)
-
 
 # ─────────────────────────────────────────────────────────────────────────
 # Blockchain Verify
@@ -109,8 +125,10 @@ async def verify(body: VerifyRequest):
     Verify whether a SHA-256 hash has been previously anchored
     on the blockchain ledger.
     """
+    logger.info("Verify request received for hash: %s", body.sha256)
     result = await blockchain_service.verify(body.sha256)
     if not result["found"]:
+        logger.warning("Hash not found on ledger: %s", body.sha256)
         raise HTTPException(status_code=404, detail="Hash not found on ledger.")
     return VerifyResponse(**result)
 
